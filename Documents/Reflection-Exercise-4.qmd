@@ -1,0 +1,145 @@
+---
+title: "Estimating Respondents with Doctoral Degrees by State"
+format: pdf
+editor: visual
+
+#### Preamble ####
+# Purpose: Reflection Exercise 4 
+# Author: Gauravpreet Thind
+# Date: October 10, 2024
+# Contact: gauravpreet.thind@mail.utoronto.ca
+# License: MIT
+# Pre-requisites: None
+# Any other information needed? Need to install packages
+---
+#### Workspace
+
+```{r}
+library(babynames)
+library(gh)
+library(here)
+library(httr)
+library(janitor)
+library(jsonlite)
+library(knitr)
+library(lubridate)
+library(pdftools)
+library(purrr)
+library(rvest)
+library(tesseract)
+library(tidyverse)
+library(usethis)
+library(xml2)
+```
+
+#### Instructions on how to obtain the data
+
+To access the 2022 American Community Survey (ACS) data from IPUMS, follow these steps:
+
+1.  **Visit the IPUMS USA Website**:
+    -   Go to [IPUMS USA](https://usa.ipums.org/usa/).
+2.  **Create an Account**:
+    -   If you do not already have an account, click on "Register" at the top right of the page to create a free account. Fill out the required fields and verify your email.
+3.  **Select the 2022 ACS Data**:
+    -   Once logged in, navigate to the "Data" tab in the menu.
+    -   Click on "American Community Survey (ACS)" and select "2022" from the list of available years.
+4.  **Choose Your Variables**:
+    -   Click on "Select Variables" to open the variable selection interface.
+    -   In the variable search box, type and select the following:
+        -   **STATEICP**: This variable provides the state FIPS code.
+        -   **EDUC**: This variable captures educational attainment, allowing you to filter for doctoral degrees.
+    -   Make sure to select the appropriate options for these variables.
+5.  **Create Your Data Extract**:
+    -   After selecting your variables, click "Submit Selection."
+    -   Review your variable selection and click on "Next" to proceed to the extract options.
+    -   Choose the format you prefer for the dataset (e.g., CSV or STATA).
+6.  **Download the Data**:
+    -   Once your extract is created, you will be directed to a download page.
+    -   Click on the download link to save the dataset to your computer.
+7.  **Data Preparation**:
+    -   Open the downloaded file in your preferred data analysis software (e.g., R, Python).
+    -   Ensure that the data is properly formatted and ready for analysis as per the subsequent steps in your project.
+
+By following these instructions, you will be able to access the 2022 ACS data necessary for your analysis.
+
+#### Overview of the Ratio Estimators Approach
+
+The ratio estimator is a statistical technique used to improve the estimation of a population total based on known relationships between different subsets of data. This method is particularly useful when we have a reliable reference point to make estimates for other groups.
+
+### Key Concepts:
+
+1.  **Ratio Estimation**:
+    -   The core idea is to use the ratio of two quantities to estimate a third quantity. In this context, we calculate the ratio of respondents with a specific characteristic (e.g., doctoral degree holders) to the total number of respondents in a known reference group (in this case, California).
+2.  **Mathematical Formula**:
+    -   The ratio estimator can be expressed as: \[ \hat{T}*j =* \frac{D_j}{D_{CA}} \times T{CA} \] Where:
+    -   ( \hat{T}\_j ) = estimated total respondents in state ( j )
+    -   ( D_j ) = number of respondents with the characteristic in state ( j )
+    -   ( D\_{CA} ) = number of respondents with the characteristic in California
+    -   ( T\_{CA} ) = total number of respondents in California
+3.  **Assumptions**:
+    -   The method assumes that the ratio observed in the reference group is applicable to the other groups being estimated. This means that the distribution of the characteristic is similar across the populations being compared.
+4.  **Advantages**:
+    -   Ratio estimation can lead to more accurate estimates compared to
+
+
+```{r}
+library(tidyverse)
+
+data <- read_csv("Users\gthin\Downloads\usa_00001.csv")
+
+# Count respondents with doctoral degrees by state
+doctorate_counts <- data %>%
+  filter(EDUC == "Doctoral degree") %>%
+  group_by(STATEICP) %>%
+  summarize(Doctoral_Count = n())
+
+# Assume actual counts for total respondents in California
+total_CA <- 391171
+
+# Estimate total respondents in each state
+estimates <- doctorate_counts %>%
+  mutate(Estimated_Total = (Doctoral_Count / sum(Doctoral_Count)) * total_CA)
+
+final_table <- estimates %>%
+  select(STATEICP, Doctoral_Count, Total_Count, Estimated_Total)
+
+print(final_table)
+```
+
+```{r}
+library(tidyverse)
+library(knitr)
+
+# Actual counts for comparison (replace these with actual values from your dataset)
+actual_counts <- tibble(
+  STATEICP = c("CA", "NY", "TX", "FL", "IL"),
+  Actual_Total = c(391171, actual_value_NY, actual_value_TX, actual_value_FL, actual_value_IL)
+)
+
+# Merge estimates with actual counts
+comparison_table <- estimates %>%
+  left_join(actual_counts, by = "STATEICP") %>%
+  select(STATEICP, Doctoral_Count, Total_Count, Estimated_Total, Actual_Total)
+
+# Create the table
+comparison_table %>%
+  kable(caption = "Comparison of Estimated and Actual Counts of Respondents with Doctoral Degrees")
+
+```
+### Explanation of Differences
+
+#The differences between the estimated totals and actual counts may arise from several factors:
+
+#1. **Sampling Error**: The ACS is based on a sample survey, which inherently introduces sampling variability. Estimates may differ from the actual counts due to the random nature of sampling.
+
+#2. **Assumptions of the Model**: The ratio estimator assumes that the relationship observed in California applies similarly to other states. If educational attainment distributions vary significantly across states, this assumption may not hold, leading to discrepancies.
+
+#3. **Data Limitations**: The educational attainment categories might not capture the full diversity of educational qualifications across different states, resulting in underestimation or overestimation.#
+
+#4. **Population Characteristics**: Demographic factors, such as age, ethnicity, and socioeconomic status, can affect educational attainment levels differently in various states, contributing to the variance between estimated and actual counts.#
+
+# Understanding these differences helps contextualize the estimates and informs future analyses. #
+
+#### References ####
+
+Steven Ruggles, Sarah Flood, Matthew Sobek, Daniel Backman, Annie Chen, Grace Cooper, Stephanie Richards, Renae Rodgers, and Megan Schouweiler. IPUMS USA: Version 15.0 [dataset]. Minneapolis, MN: IPUMS, 2024. https://doi.org/10.18128/D010.V15.0
